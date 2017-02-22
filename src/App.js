@@ -1,5 +1,5 @@
 const NEAR = 0.1;
-const FAR = 3000;
+const FAR = 9000;
 const WIDTH = 64;
 
 var container, controls;
@@ -33,11 +33,23 @@ let birdVS = require('./shaders/bird.vert.glsl');
 
 export default class App {
   constructor() {
-    this.bindHandler('_render', '_handleResize');
-    this.setup3D();
-    this.createScene();
-
+    let context = this;
     window.addEventListener('resize', this._handleResize.bind(this));
+
+    fetch('http://localhost:3344')
+      .then(function(response) {
+        return response.json();
+      })
+      .then(function(data) {
+        context.data = data;
+
+        context.bindHandler('_render', '_handleResize');
+        context.setup3D();
+        context.createScene();
+
+        context.start();
+      });
+
   }
 
   start() {
@@ -66,7 +78,7 @@ export default class App {
 
   setupScene() {
     scene = this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.Fog( 0xffffff, 100, 1000 );
+    this.scene.fog = new THREE.Fog( 0x000000, 500, 3000 );
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, NEAR, FAR);
     camera = this.camera;
     camera.position.y = (100);
@@ -74,33 +86,158 @@ export default class App {
   }
 
   setupControls() {
-    controls = new THREE.TrackballControls( this.camera );
-    controls.rotateSpeed = 1.0;
-    controls.zoomSpeed = 1.2;
-    controls.panSpeed = 0.8;
-    controls.noZoom = false;
-    controls.noPan = false;
-    controls.staticMoving = true;
-    controls.dynamicDampingFactor = 0.3;
-    controls.keys = [ 65, 83, 68 ];
-    controls.addEventListener( 'change', () => {
-      console.log('controls')
-      this._render();
-    } );
+    let camera = this.camera;
+
+    this.renderer.domElement.addEventListener('mousewheel', function (event) {
+      event.preventDefault();
+      camera.translateZ( event.deltaY );
+    });
+    // controls = new THREE.TrackballControls( camera );
+    // controls.rotateSpeed = 1.0;
+    // controls.zoomSpeed = 1.2;
+    // controls.panSpeed = 0.8;
+    // controls.noZoom = true;
+    // controls.noPan = false;
+    //controls.staticMoving = true;
+    //controls.dynamicDampingFactor = 0.3;
+    //controls.keys = [ 65, 83, 68 ];
+    // controls.addEventListener( 'change', () => {
+    //   this._render();
+    // } );
+
+  }
+
+  shuffle(a) {
+    for (let i = a.length; i; i--) {
+        let j = Math.floor(Math.random() * i);
+        [a[i - 1], a[j]] = [a[j], a[i - 1]];
+    }
+    return a;
+  }
+
+  loadTextures() {
+    let context = this;
+    return new Promise(function (resolve, reject) {
+      let textureLoader = new THREE.TextureLoader();
+
+      context.background = new THREE.CubeTextureLoader()
+        .setPath( '/src/assets/' )
+        .load( context.shuffle(['sb-side.jpg', 'sb-side.jpg', 'sb-side.jpg', 'sb-side.jpg', 'sb-side.jpg', 'sb-side.jpg']),
+          () => {
+            resolve();
+          },
+          () => {
+            // progress
+          },
+          () => {
+            reject();
+          });
+    });
+  }
+
+  loadFonts() {
+    return new Promise(function (resolve, reject) {
+      var loader = new THREE.FontLoader();
+      loader.load( 'src/assets/optimer_bold.typeface.json',
+        (response) => {
+          console.log(response);
+          resolve(response);
+        },
+        () => {},
+        () => {
+          reject()
+        });
+    });
+  }
+
+  breakTweet(text) {
+    let counter = 0;
+    return this.decodeHTMLEntities(text)
+      .split('')
+      .map((text, index) => {
+        if (counter > 25 && text === ' ') {
+          counter = 0;
+          return ' \n';
+        }
+        counter++;
+        return text;
+      })
+      .join('');
+  }
+
+  decodeHTMLEntities(text) {
+    var entities = {
+      'amp': '&',
+      'apos': '\'',
+      '#x27': '\'',
+      '#x2F': '/',
+      '#39': '\'',
+      '#47': '/',
+      'lt': '<',
+      'gt': '>',
+      'nbsp': ' ',
+      'quot': '"'
+    }
+
+    return text.replace(/&([^;]+);/gm, function (match, entity) {
+      return entities[entity] || match
+    })
+  }
+
+   mergeMeshes(meshes) {
+    var combined = new THREE.Geometry();
+
+    for (var i = 0; i < meshes.length; i++) {
+      meshes[i].updateMatrix();
+      combined.merge(meshes[i].geometry, meshes[i].matrix);
+    }
+
+    return combined;
   }
 
   setupContent() {
-    let material = new THREE.MeshPhongMaterial( { color: 0xdddddd, specular: 0x009900, shininess: 0, shading: THREE.SmoothShading,transparent: true } );
-    let box = new THREE.Mesh( new THREE.BoxGeometry( 100, 100, 100, 4, 4, 4 ), material );
-    box.position.set( -200, 0, 0 );
-    this.scene.add( box );
+    let context = this;
+    let randomPos = () => (Math.round((Math.random()*40)-20)*100);
+    this.loadTextures()
+      .then(() => {
+        return this.loadFonts();
+      })
+      .then((font) => {
+        let material = new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          envMap: this.background
+        });
+
+        context.mergeMeshes(context.data.map((tweet, i) => {
+          let textGeo = new THREE.TextGeometry( context.breakTweet(tweet), {
+            font: font,
+            size: 80,
+            height: 2,
+            // curveSegments: 3,
+            // bevelThickness: 5,
+            // bevelSize: 5,
+            // bevelEnabled: true,
+            material: 0,
+            extrudeMaterial: 1
+          });
+
+          textGeo.computeBoundingBox();
+          textGeo.computeVertexNormals();
+
+          let textMesh = new THREE.Mesh( textGeo, material );
+          textMesh.position.set( -1200, 200, i * -1500 );
+          this.scene.add( textMesh );
+
+          //return textMesh;
+        }));
+      })
+      .catch((err) => {
+        console.log(err);
+      });
   }
 
   createScene() {
     scene = this.scene;
-
-    var grid = new THREE.GridHelper(1000, 5, 0x333333, 0x333333);
-    scene.add(grid);
   }
 
   _render(timestamp) {
@@ -113,7 +250,7 @@ export default class App {
 
   animate() {
     requestAnimationFrame(this.animate.bind(this));
-    controls.update();
+    //controls.update();
   }
 
   _handleResize(event) {
@@ -122,7 +259,7 @@ export default class App {
 
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
-    controls.handleResize();
+    //controls.handleResize();
     renderer.setSize(window.innerWidth, window.innerHeight);
   }
 }
