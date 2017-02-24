@@ -191,13 +191,13 @@ export default class App {
 
         let lastBoundingBox = null;
 
-        var geometry = new THREE.BoxBufferGeometry( 50, 50, 50 );
+        var geometry = new THREE.BoxBufferGeometry( 100, 100, 100 );
 
         for ( var i = 0; i < 500; i ++ ) {
           var object = new THREE.Mesh( geometry, material );
-          object.position.x = Math.random() * 800 - 400;
+          object.position.x = Math.random() * 1000 - 500;
           object.position.y = i * -10;
-          object.position.z = Math.random() * -800 - 400;
+          object.position.z = Math.random() * -1200 + 200;
           object.rotation.x = Math.random() * 2 * Math.PI;
           object.rotation.y = Math.random() * 2 * Math.PI;
           object.rotation.z = Math.random() * 2 * Math.PI;
