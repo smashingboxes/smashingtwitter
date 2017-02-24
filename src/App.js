@@ -38,19 +38,11 @@ export default class App {
     let context = this;
     window.addEventListener('resize', this._handleResize.bind(this));
 
-    fetch('http://localhost:3344')
-      .then(function(response) {
-        return response.json();
-      })
-      .then(function(data) {
-        context.data = data;
-
         context.bindHandler('_render', '_handleResize');
         context.setup3D();
         context.createScene();
 
         context.start();
-      });
 
   }
 
@@ -199,37 +191,23 @@ export default class App {
 
         let lastBoundingBox = null;
 
-        context.mergeMeshes(context.data.map((tweet, i) => {
-          let textGeo = new THREE.TextGeometry( context.breakTweet(tweet), {
-            font: font,
-            size: 80,
-            height: 2,
-            // curveSegments: 3,
-            // bevelThickness: 5,
-            // bevelSize: 5,
-            // bevelEnabled: true,
-            material: 0,
-            extrudeMaterial: 1
-          });
+        var geometry = new THREE.BoxBufferGeometry( 50, 50, 50 );
 
-          textGeo.computeBoundingBox();
-          textGeo.computeVertexNormals();
+        for ( var i = 0; i < 500; i ++ ) {
+          var object = new THREE.Mesh( geometry, material );
+          object.position.x = Math.random() * 800 - 400;
+          object.position.y = i * -10;
+          object.position.z = Math.random() * -800 - 400;
+          object.rotation.x = Math.random() * 2 * Math.PI;
+          object.rotation.y = Math.random() * 2 * Math.PI;
+          object.rotation.z = Math.random() * 2 * Math.PI;
 
-          let ypos = (lastBoundingBox) ? lastBoundingBox.min.y - 200 : 0;
-          let textMesh = new THREE.Mesh( textGeo, material );
+          scene.add( object );
 
-          if (ypos < cameraYMin) {
-            cameraYMin = ypos - 500;
+          if (object.position.y < cameraYMin + 500) {
+            cameraYMin = object.position.y + 500;
           }
-
-          textMesh.position.set( -1100, ypos, -700 );
-          textMesh.rotation.set(0, 0.1, 0);
-          this.scene.add( textMesh );
-
-          lastBoundingBox = new THREE.Box3().setFromObject( textMesh );
-          //console.log(lastBoundingBox);
-          //return textMesh;
-        }));
+        }
 
       })
       .catch((err) => {
