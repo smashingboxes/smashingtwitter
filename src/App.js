@@ -30,6 +30,8 @@ let velocityTexture = require('./shaders/velocity.frag.glsl');
 let positionTexture = require('./shaders/position.frag.glsl');
 let birdFS = require('./shaders/bird.frag.glsl');
 let birdVS = require('./shaders/bird.vert.glsl');
+let cameraYMax = 100;
+let cameraYMin = -1000;
 
 export default class App {
   constructor() {
@@ -57,7 +59,7 @@ export default class App {
       requestAnimationFrame(loop);
       this._render();
     }
-    requestAnimationFrame(this.animate.bind(this));
+    //requestAnimationFrame(this.animate.bind(this));
     requestAnimationFrame(loop);
   }
 
@@ -90,21 +92,8 @@ export default class App {
 
     this.renderer.domElement.addEventListener('mousewheel', function (event) {
       event.preventDefault();
-      camera.translateZ( event.deltaY );
+      camera.translateY( -event.deltaY );
     });
-    // controls = new THREE.TrackballControls( camera );
-    // controls.rotateSpeed = 1.0;
-    // controls.zoomSpeed = 1.2;
-    // controls.panSpeed = 0.8;
-    // controls.noZoom = true;
-    // controls.noPan = false;
-    //controls.staticMoving = true;
-    //controls.dynamicDampingFactor = 0.3;
-    //controls.keys = [ 65, 83, 68 ];
-    // controls.addEventListener( 'change', () => {
-    //   this._render();
-    // } );
-
   }
 
   shuffle(a) {
@@ -208,6 +197,8 @@ export default class App {
           envMap: this.background
         });
 
+        let lastBoundingBox = null;
+
         context.mergeMeshes(context.data.map((tweet, i) => {
           let textGeo = new THREE.TextGeometry( context.breakTweet(tweet), {
             font: font,
@@ -224,12 +215,22 @@ export default class App {
           textGeo.computeBoundingBox();
           textGeo.computeVertexNormals();
 
+          let ypos = (lastBoundingBox) ? lastBoundingBox.min.y - 200 : 0;
           let textMesh = new THREE.Mesh( textGeo, material );
-          textMesh.position.set( -1200, 200, i * -1500 );
+
+          if (ypos < cameraYMin) {
+            cameraYMin = ypos - 500;
+          }
+
+          textMesh.position.set( -1100, ypos, -700 );
+          textMesh.rotation.set(0, 0.1, 0);
           this.scene.add( textMesh );
 
+          lastBoundingBox = new THREE.Box3().setFromObject( textMesh );
+          //console.log(lastBoundingBox);
           //return textMesh;
         }));
+
       })
       .catch((err) => {
         console.log(err);
@@ -244,6 +245,13 @@ export default class App {
     const scene = this.scene;
     const camera = this.camera;
     const renderer = this.renderer;
+
+    if ( camera.position.y < cameraYMin ) {
+      camera.translateY( Math.ceil((cameraYMin - camera.position.y) / 4) + 1 );
+    }
+    if ( camera.position.y > cameraYMax ) {
+      camera.translateY( Math.floor((cameraYMax - camera.position.y) / 4) - 1 );
+    }
 
     renderer.render(scene, camera);
   }

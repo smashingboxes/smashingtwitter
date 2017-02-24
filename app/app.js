@@ -16,11 +16,6 @@ const twitter = new LibTwitter({
 
 let data = [];
 
-
-function filterByWords(text) {
-  return text.match(/(fake|sad|leaks)/gi);
-}
-
 app.use(cors());
 
 twitter.get('search/tweets', {q: 'from:smashingboxes', count: 10}, function(error, tweets, response) {
