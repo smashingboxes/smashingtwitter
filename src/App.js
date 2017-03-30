@@ -63,6 +63,9 @@ export default class App {
     renderer = this.renderer = new THREE.WebGLRenderer({antialias: true});
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(1);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.BasicShadowMap;
+
     document.body.appendChild(renderer.domElement);
 
     this.setupScene();
@@ -72,8 +75,16 @@ export default class App {
 
   setupScene() {
     scene = this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.Fog( 0x000000, 500, 3000 );
+    scene.add( new THREE.AmbientLight( 0x111111 ) );
+
+    //this.scene.fog = new THREE.Fog( 0x000000, 500, 3000 );
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, NEAR, FAR);
+
+    this.light = new THREE.PointLight( 0xffffff, 1.1, 2000 );
+    this.light.position.set( window.innerWidth / window.innerHeight, 100, 500, 2);
+
+    scene.add( this.light );
+
     camera = this.camera;
     camera.position.y = (100);
     camera.position.z = (500);
@@ -81,10 +92,12 @@ export default class App {
 
   setupControls() {
     let camera = this.camera;
+    let light = this.light;
 
     this.renderer.domElement.addEventListener('mousewheel', function (event) {
       event.preventDefault();
       camera.translateY( -event.deltaY );
+      light.position.set(camera.position.x, camera.position.y, camera.position.z);
     });
   }
 
@@ -184,23 +197,40 @@ export default class App {
         return this.loadFonts();
       })
       .then((font) => {
-        let material = new THREE.MeshBasicMaterial({
-          color: 0xffffff,
-          envMap: this.background
+        let material1 = new THREE.MeshPhongMaterial({
+          specular: 0x111111,
+          shininess: 50,
+          color: 0xeeeeee
+        });
+
+        let material2 = new THREE.MeshPhongMaterial({
+          specular: 0x111111,
+          shininess: 50,
+          color: 0xcccccc
+        });
+
+        let material3 = new THREE.MeshPhongMaterial({
+          specular: 0x111111,
+          shininess: 50,
+          color: 0x3763a8
         });
 
         let lastBoundingBox = null;
 
-        var geometry = new THREE.BoxBufferGeometry( 100, 100, 100 );
+        var geometry = new THREE.BoxBufferGeometry( 200, 5, 200 );
+        const X_SPREAD = 2000;
 
         for ( var i = 0; i < 500; i ++ ) {
-          var object = new THREE.Mesh( geometry, material );
-          object.position.x = Math.random() * 1000 - 500;
-          object.position.y = i * -10;
+          let mat = (Math.random() < 0.02) ? material3 : ((Math.random() > 0.5) ? material1 : material2);
+          var object = new THREE.Mesh(geometry, mat);
+          object.position.x = Math.random() * X_SPREAD -(X_SPREAD/2);
+          object.position.y = 1000 + (i * -10);
           object.position.z = Math.random() * -1200 + 200;
-          object.rotation.x = Math.random() * 2 * Math.PI;
-          object.rotation.y = Math.random() * 2 * Math.PI;
-          object.rotation.z = Math.random() * 2 * Math.PI;
+          object.rotation.x = 0.3 * Math.PI;
+          object.castShadow = true;
+          object.receiveShadow = true;
+          // object.rotation.y = Math.random() * 2 * Math.PI;
+          // object.rotation.z = Math.random() * 2 * Math.PI;
 
           scene.add( object );
 
@@ -230,6 +260,8 @@ export default class App {
     if ( camera.position.y > cameraYMax ) {
       camera.translateY( Math.floor((cameraYMax - camera.position.y) / 4) - 1 );
     }
+
+    this.light.position.set(camera.position.x, camera.position.y, camera.position.z);
 
     renderer.render(scene, camera);
   }
