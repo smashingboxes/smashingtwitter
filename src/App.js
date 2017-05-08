@@ -80,7 +80,7 @@ export default class App {
     //this.scene.fog = new THREE.Fog( 0x000000, 500, 3000 );
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, NEAR, FAR);
 
-    this.light = new THREE.PointLight( 0xffffff, 1.1, 2000 );
+    this.light = new THREE.PointLight( 0xffffff, 1.4, 2000 );
     this.light.position.set( window.innerWidth / window.innerHeight, 100, 500, 2);
 
     scene.add( this.light );
@@ -226,7 +226,7 @@ export default class App {
           object.position.x = Math.random() * X_SPREAD -(X_SPREAD/2);
           object.position.y = 1000 + (i * -10);
           object.position.z = Math.random() * -1200 + 200;
-          object.rotation.x = 0.3 * Math.PI;
+          object.rotation.x = 0.25 * Math.PI;
           object.castShadow = true;
           object.receiveShadow = true;
           // object.rotation.y = Math.random() * 2 * Math.PI;
